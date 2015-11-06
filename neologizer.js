@@ -8,12 +8,39 @@ var neologizer = (function () {
 	var INPUT_FIELD_ID = "input";
 	var OUTPUT_FIELD_ID = "output";
 	var MAX_PASSES = 1000;
-	var MAX_WORD_LEN = 20;
+	var MAX_WORD_LEN = 12;
 	var MAX_WORD_COUNT = 100;
 
 	// Determine whether a given string contains a letter.
 	var is_alpha = function (text) {
 		return (text.toLowerCase() !== text.toUpperCase());
+	};
+
+	// Determine whether a given string contains a capital letter.
+	var has_capital = function (text) {
+		return (text.toLowerCase() !== text);
+	};
+
+	// Return a copy of a given string with the first letter capitalized.
+	var capitalize = function (text) {
+		if (text) {
+			return text[0].toUpperCase() + text.slice(1);
+		}
+		return "";
+	};
+
+	// Return a copy of a given string with HTML special characters escaped.
+	var escape_html = function (text) {
+		return text
+			.replace("&", "&amp;")
+			.replace("<", "&lt;")
+			.replace(">", "&gt;")
+			.replace(" \n", "<br />");
+	};
+	
+	// Retrieve a random element from a given list.
+	var get_random_item = function (list) {
+		return list[Math.floor(Math.random()*list.length)];
 	};
 
 	// Shuffle a given array in place using the Fisher-Yates algorithm.
@@ -24,6 +51,15 @@ var neologizer = (function () {
 			list[i] = list[iSwap];
 			list[iSwap] = temp;
 		}
+	};
+	
+	// Retrieve the contents of the input field.
+	var get_input = function () {
+		var input_field = document.getElementById(INPUT_FIELD_ID);
+		if (input_field) {
+			return input_field.value;
+		}
+		return "";
 	};
 	
 	// Display supplied text in the output field or the console.
@@ -40,12 +76,7 @@ var neologizer = (function () {
 	var list_words = function (input_text) {
 		// If no input text was supplied, take it from the input field.
 		if (typeof input_text === "undefined") {
-			var input_field = document.getElementById(INPUT_FIELD_ID);
-			if (input_field) {
-				input_text = input_field.value;
-			} else {
-				input_text = "";
-			}
+			input_text = get_input();
 		}
 
 		// Convert the input text and return it as an array of words.
@@ -165,12 +196,30 @@ var neologizer = (function () {
 	
 	// List the neologisms generated from the input text.
 	var generate = function () {
-		show_output("<ol><li>" + neologize().join("</li><li>") + "</li></ol>");
+		var html = neologize().join("</li><li>");
+		if (html) {
+			html = "<ol><li>" + html + "</li></ol>";
+		}
+		show_output(html);
 	};
 	
 	// Replace the words in the input text with neologisms.
 	var convert = function () {
-		show_output(neologize().join(" "));
+		var text = get_input().replace("\n", " \n");
+		var word_list = text.split(" ");
+		var new_word_list = neologize();
+		
+		// Replace each word in the text, keeping capitalization intact.
+		var word_count = word_list.length;
+		for (var i = 0; i < word_count; i++) {
+			var new_word = get_random_item(new_word_list);
+			if (has_capital(word_list[i])) {
+				new_word = capitalize(new_word);
+			}
+			word_list[i] = word_list[i].replace(/[a-z]+/i, new_word);
+		}
+		
+		show_output(escape_html(word_list.join(" ")));
 	};
 	
 	// Return a public interface for this module.
