@@ -2,13 +2,14 @@
 learns to make up new words. You may find a practical use for such neologizing
 (filler text, brand naming, etc.), but mostly it's just fun.
 */
-var Neologizer = (function () {
+var neologizer = (function () {
 	"use strict";
 
 	var INPUT_FIELD_ID = "input";
 	var OUTPUT_FIELD_ID = "output";
 	var MAX_PASSES = 1000;
-	var MAX_WORD_LEN = 100;
+	var MAX_WORD_LEN = 20;
+	var MAX_WORD_COUNT = 100;
 
 	// Determine whether a given string contains a letter.
 	var is_alpha = function (text) {
@@ -22,6 +23,16 @@ var Neologizer = (function () {
 			var temp = list[i];
 			list[i] = list[iSwap];
 			list[iSwap] = temp;
+		}
+	};
+	
+	// Display supplied text in the output field or the console.
+	var show_output = function (output_text) {
+		var output_field = document.getElementById(OUTPUT_FIELD_ID);
+		if (output_field) {
+			output_field.innerHTML = output_text;
+		} else {
+			console.log(output_text);
 		}
 	};
 
@@ -133,6 +144,7 @@ var Neologizer = (function () {
 				}
 			} while (state === "working");
 
+			// If a new word was successfully generated, at it to the list.
 			if (state === "success") {
 				var new_word = chunk.slice(0, -1);
 				if (
@@ -141,29 +153,24 @@ var Neologizer = (function () {
 				) {
 					new_word_list.push(new_word);
 				}
+				
+				// Quit generating words when a limit is reached.
+				if (new_word_list.length >= MAX_WORD_COUNT) {
+					break;
+				}
 			}
 		}
 		return new_word_list;
 	};
 	
-	// Display supplied text in the output field or the console.
-	var show_output = function (output_text) {
-		var output_field = document.getElementById(OUTPUT_FIELD_ID);
-		if (output_field) {
-			output_field.innerHTML = output_text;
-		} else {
-			console.log(output_text);
-		}
-	};
-	
 	// List the neologisms generated from the input text.
 	var generate = function () {
-		show_output(neologize().join(", "));
+		show_output("<ol><li>" + neologize().join("</li><li>") + "</li></ol>");
 	};
 	
 	// Replace the words in the input text with neologisms.
 	var convert = function () {
-		// TODO!
+		show_output(neologize().join(" "));
 	};
 	
 	// Return a public interface for this module.
