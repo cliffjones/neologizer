@@ -9,7 +9,9 @@ var neologizer = (function () {
 	var OUTPUT_FIELD_ID = "output";
 	var MAX_PASSES = 1000;
 	var MAX_WORD_LEN = 12;
-	var MAX_WORD_COUNT = 100;
+	var MAX_WORD_COUNT = 500;
+	var SPACE_REGEX = " \t\n\r";
+	var PUNC_REGEX = "`~!@#$%^&*()\\-_=+[\\]{}\\\\|;:'\",.<>\\/?0-9";
 
 	// Determine whether a given string contains a letter.
 	var is_alpha = function (text) {
@@ -35,7 +37,7 @@ var neologizer = (function () {
 			.replace("&", "&amp;")
 			.replace("<", "&lt;")
 			.replace(">", "&gt;")
-			.replace(" \n", "<br />");
+			.replace(/(\r\n|[\n\r])/g, "<br />");
 	};
 	
 	// Retrieve a random element from a given list.
@@ -205,26 +207,30 @@ var neologizer = (function () {
 	
 	// Replace the words in the input text with neologisms.
 	var convert = function () {
-		var text = get_input().replace("\n", " \n");
-		var word_list = text.split(" ");
 		var new_word_list = neologize();
 		
-		// Replace each word in the text, keeping capitalization intact.
-		var word_count = word_list.length;
-		for (var i = 0; i < word_count; i++) {
+		// Replace a found word, maintaining capitalization, punctuation, etc.
+		var replace_word = function (match, prefix, word, suffix, space) {
 			var new_word = get_random_item(new_word_list);
-			if (has_capital(word_list[i])) {
+			if (has_capital(word)) {
 				new_word = capitalize(new_word);
 			}
-			word_list[i] = word_list[i].replace(/[a-z]+/i, new_word);
-		}
+			return prefix + new_word + suffix + space;
+		};
 		
-		show_output(escape_html(word_list.join(" ")));
+		// Fetch the input text, replace its words, and output the result.
+		var text = get_input();
+		var re = "([" + PUNC_REGEX + "]*)" // Leading punctuation.
+			+ "([^" + SPACE_REGEX + "]+?)" // The word to replace.
+			+ "([" + PUNC_REGEX + "]*)" // Trailing punctuation.
+			+ "([" + SPACE_REGEX + "]+|$)"; // Trailing space.
+		text = text.replace(new RegExp(re, "g"), replace_word);
+		show_output(escape_html(text));
 	};
 	
 	// Return a public interface for this module.
 	return {
 		generate: generate,
-		convert: convert
+		convert: convert2
 	};
 })();
