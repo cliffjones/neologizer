@@ -231,6 +231,6 @@ var neologizer = (function () {
 	// Return a public interface for this module.
 	return {
 		generate: generate,
-		convert: convert2
+		convert: convert
 	};
 })();
