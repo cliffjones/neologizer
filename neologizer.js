@@ -10,8 +10,9 @@ var neologizer = (function () {
 	var MAX_PASSES = 1000;
 	var MAX_WORD_LEN = 12;
 	var MAX_WORD_COUNT = 500;
-	var SPACE_REGEX = " \t\n\r";
+	var SPACE_REGEX = " \\t\\n\\r";
 	var PUNC_REGEX = "`~!@#$%^&*()\\-_=+[\\]{}\\\\|;:'\",.<>\\/?0-9";
+	var ERROR_NO_WORDS = "More source text is needed to generate new words.";
 
 	// Determine whether a given string contains a letter.
 	var is_alpha = function (text) {
@@ -203,11 +204,23 @@ var neologizer = (function () {
 			html = "<ol><li>" + html + "</li></ol>";
 		}
 		show_output(html);
+		
+		// If there is no output to display, show an error message instead.
+		if (html === "") {
+			alert(ERROR_NO_WORDS);
+		}
 	};
 	
 	// Replace the words in the input text with neologisms.
 	var convert = function () {
 		var new_word_list = neologize();
+		
+		// If there is no output to display, show an error message instead.
+		if (!new_word_list.length) {
+			show_output("");
+			alert(ERROR_NO_WORDS);
+			return;
+		}
 		
 		// Replace a found word, maintaining capitalization, punctuation, etc.
 		var replace_word = function (match, prefix, word, suffix, space) {
