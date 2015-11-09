@@ -13,6 +13,10 @@ var neologizer = (function () {
     var SPACE_REGEX = " \\t\\n\\r";
     var PUNC_REGEX = "`~!@#$%^&*()\\-_=+[\\]{}\\\\|;:'\",.<>\\/?0-9";
     var ERROR_NO_WORDS = "More source text is needed to generate new words.";
+    var STATE_ERROR = 0;
+    var STATE_WORKING = 1;
+    var STATE_MATCH = 2;
+    var STATE_SUCCESS = 3;
 
     // Determine whether a given string contains a letter.
     var is_alpha = function (text) {
@@ -146,7 +150,7 @@ var neologizer = (function () {
             do { 
                 shuffle(rule_list);
 
-                var state = "error";
+                var state = STATE_ERROR;
 
                 // Step through the 3-letter rules until a match is found.
                 var rule_count = rule_list.length;
@@ -156,14 +160,14 @@ var neologizer = (function () {
                         // This condition is only met at the start of a word.
                         target = rule.substr(1, 2);
                         chunk = target[0];
-                        state = "match";
+                        state = STATE_MATCH;
                     } else if (target === rule.substr(0, 2)) {
                         target = rule.substr(1, 2);
-                        state = "match";
+                        state = STATE_MATCH;
                     }
-                    if (state === "match") {
+                    if (state === STATE_MATCH) {
                         chunk += target[1];
-                        state = "working";
+                        state = STATE_WORKING;
                         break;
                     }
                 }
@@ -171,15 +175,15 @@ var neologizer = (function () {
                 // Check for a generated word of acceptable length.
                 var chunk_len = chunk.length;
                 if (chunk_len > MAX_WORD_LEN) {
-                    state = "error";
+                    state = STATE_ERROR;
                 } else if (chunk_len > 1 && chunk[chunk_len - 1] === "_") {
                     // If another word boundary is found, the word is complete!
-                    state = "success";
+                    state = STATE_SUCCESS;
                 }
-            } while (state === "working");
+            } while (state === STATE_WORKING);
 
             // If a new word was successfully generated, at it to the list.
-            if (state === "success") {
+            if (state === STATE_SUCCESS) {
                 var new_word = chunk.slice(0, -1);
                 if (
                     new_word_list.indexOf(new_word) === -1
