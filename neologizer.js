@@ -55,7 +55,7 @@ var neologizer = (function () {
 
   // Shuffle a given array in place using the Fisher-Yates algorithm.
   var shuffle = function (list) {
-    for (var i = list.length - 1; i > 0; i--) {
+    for (var i = list.length - 1; i > 0; i -= 1) {
       var swap = Math.floor(Math.random() * (i + 1));
       var temp = list[i];
       list[i] = list[swap];
@@ -92,7 +92,7 @@ var neologizer = (function () {
     // Convert the input text and return it as an array of words.
     var outputText = '';
     var inputLen = inputText.length;
-    for (var i = 0; i < inputLen; i++) {
+    for (var i = 0; i < inputLen; i += 1) {
       if (is_alpha(inputText[i])) {
         outputText += inputText[i].toLowerCase();
       } else {
@@ -113,10 +113,10 @@ var neologizer = (function () {
     // Using the underscore as a word boundary, collect all 3-grams.
     var ruleList = []
     var word_count = wordList.length;
-    for (var wordNum = 0; wordNum < word_count; wordNum++) {
+    for (var wordNum = 0; wordNum < word_count; wordNum += 1) {
       var word = wordList[wordNum];
       var wordLen = word.length;
-      for (var charNum = 0; charNum < wordLen; charNum++) {
+      for (var charNum = 0; charNum < wordLen; charNum += 1) {
         var rule = '';
         if (charNum === 0) {
           rule += '_';
@@ -146,7 +146,7 @@ var neologizer = (function () {
     var ruleList = listRules(wordList);
 
     var newWordList = [];
-    for (var i = 0; i < MAX_PASSES; i++) {
+    for (var i = 0; i < MAX_PASSES; i += 1) {
       // Piece together bits from random rules until a word is formed.
       var target = '_';
       var chunk = '';
@@ -157,7 +157,7 @@ var neologizer = (function () {
 
         // Step through the 3-letter rules until a match is found.
         var rule_count = ruleList.length;
-        for (var ruleNum = 0; ruleNum < rule_count; ruleNum++) {
+        for (var ruleNum = 0; ruleNum < rule_count; ruleNum += 1) {
           var rule = ruleList[ruleNum];
           if (target === rule[0]) {
             // This condition is only met at the start of a word.
@@ -251,6 +251,6 @@ var neologizer = (function () {
   // Return a public interface for this module.
   return {
     generate: generate,
-    convert: convert
+    convert: convert,
   };
 })();
