@@ -1,253 +1,256 @@
-/* Neologizer analyzes the structure of words in a given text and uses what it
-learns to make up new words. You may find a practical use for such neologizing
-(filler text, brand naming, etc.), but mostly it's just fun.
-*/
+/**
+ * NEOLOGIZER by Cliff Jones Jr.
+ * 
+ * Neologizer analyzes the structure of words in a given text and uses what it
+ * learns to make up new words. You may find a practical use for such neologizing
+ * (filler text, brand naming, etc.), but mostly it's just fun.
+ */
 var neologizer = (function () {
-    "use strict";
+  'use strict';
 
-    var INPUT_FIELD_ID = "input";
-    var OUTPUT_FIELD_ID = "output";
-    var MAX_PASSES = 1000;
-    var MAX_WORD_LEN = 12;
-    var MAX_WORD_COUNT = 500;
-    var SPACE_REGEX = " \\t\\n\\r";
-    var PUNC_REGEX = "`~!@#$%^&*()\\-_=+[\\]{}\\\\|;:'\",.<>\\/?0-9";
-    var ERROR_NO_WORDS = "More source text is needed to generate new words.";
-    var STATE_ERROR = 0;
-    var STATE_WORKING = 1;
-    var STATE_MATCH = 2;
-    var STATE_SUCCESS = 3;
+  var INPUT_FIELD_ID = 'input';
+  var OUTPUT_FIELD_ID = 'output';
+  var MAX_PASSES = 1000;
+  var MAX_WORD_LEN = 12;
+  var MAX_WORD_COUNT = 500;
+  var SPACE_REGEX = ' \\t\\n\\r';
+  var PUNC_REGEX = '`~!@#$%^&*()\\-_=+[\\]{}\\\\|;:\'",.<>\\/?0-9';
+  var ERROR_NO_WORDS = 'More source text is needed to generate new words.';
+  var STATE_ERROR = 0;
+  var STATE_WORKING = 1;
+  var STATE_MATCH = 2;
+  var STATE_SUCCESS = 3;
 
-    // Determine whether a given string contains a letter.
-    var is_alpha = function (text) {
-        return (text.toLowerCase() !== text.toUpperCase());
-    };
+  // Determine whether a given string contains a letter.
+  var is_alpha = function (text) {
+    return (text.toLowerCase() !== text.toUpperCase());
+  };
 
-    // Determine whether a given string contains a capital letter.
-    var has_capital = function (text) {
-        return (text.toLowerCase() !== text);
-    };
+  // Determine whether a given string contains a capital letter.
+  var hasCapital = function (text) {
+    return (text.toLowerCase() !== text);
+  };
 
-    // Return a copy of a given string with the first letter capitalized.
-    var capitalize = function (text) {
-        if (text) {
-            return text[0].toUpperCase() + text.slice(1);
-        }
-        return "";
-    };
+  // Return a copy of a given string with the first letter capitalized.
+  var capitalize = function (text) {
+    if (text) {
+      return text[0].toUpperCase() + text.slice(1);
+    }
+    return '';
+  };
 
-    // Return a copy of a given string with HTML special characters escaped.
-    var escape_html = function (text) {
-        return text
-            .replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-            .replace(/(\r\n|[\n\r])/g, "<br />");
-    };
-    
-    // Retrieve a random element from a given list.
-    var get_random_item = function (list) {
-        return list[Math.floor(Math.random()*list.length)];
-    };
+  // Return a copy of a given string with HTML special characters escaped.
+  var escapeHtml = function (text) {
+    return text
+      .replace('&', '&amp;')
+      .replace('<', '&lt;')
+      .replace('>', '&gt;')
+      .replace(/(\r\n|[\n\r])/g, '<br />');
+  };
+  
+  // Retrieve a random element from a given list.
+  var getRandomItem = function (list) {
+    return list[Math.floor(Math.random() * list.length)];
+  };
 
-    // Shuffle a given array in place using the Fisher-Yates algorithm.
-    var shuffle = function (list) {
-        for (var i = list.length - 1; i > 0; i--) {
-            var iSwap = Math.floor(Math.random()*(i + 1));
-            var temp = list[i];
-            list[i] = list[iSwap];
-            list[iSwap] = temp;
-        }
-    };
-    
-    // Retrieve the contents of the input field.
-    var get_input = function () {
-        var input_field = document.getElementById(INPUT_FIELD_ID);
-        if (input_field) {
-            return input_field.value;
-        }
-        return "";
-    };
-    
-    // Display supplied text in the output field or the console.
-    var show_output = function (output_text) {
-        var output_field = document.getElementById(OUTPUT_FIELD_ID);
-        if (output_field) {
-            output_field.innerHTML = output_text;
+  // Shuffle a given array in place using the Fisher-Yates algorithm.
+  var shuffle = function (list) {
+    for (var i = list.length - 1; i > 0; i--) {
+      var swap = Math.floor(Math.random() * (i + 1));
+      var temp = list[i];
+      list[i] = list[swap];
+      list[swap] = temp;
+    }
+  };
+  
+  // Retrieve the contents of the input field.
+  var getInput = function () {
+    var inputField = document.getElementById(INPUT_FIELD_ID);
+    if (inputField) {
+      return inputField.value;
+    }
+    return '';
+  };
+  
+  // Display supplied text in the output field or the console.
+  var showOutput = function (outputText) {
+    var outputField = document.getElementById(OUTPUT_FIELD_ID);
+    if (outputField) {
+      outputField.innerHTML = outputText;
+    } else {
+      console.log(outputText);
+    }
+  };
+
+  // Convert a given selection of text into an array containing its words.
+  var listWords = function (inputText) {
+    // If no input text was supplied, take it from the input field.
+    if (typeof inputText === 'undefined') {
+      inputText = getInput();
+    }
+
+    // Convert the input text and return it as an array of words.
+    var outputText = '';
+    var inputLen = inputText.length;
+    for (var i = 0; i < inputLen; i++) {
+      if (is_alpha(inputText[i])) {
+        outputText += inputText[i].toLowerCase();
+      } else {
+        outputText += ' ';
+      }
+    }
+    outputText = outputText.replace(/  +/g, ' ').trim();
+    return outputText.split(' ');
+  };
+
+  // Return a list of 3-letter rules for letters sequences.
+  var listRules = function (wordList) {
+    // If no word list was supplied, extract it from the input field.
+    if (typeof wordList === 'undefined') {
+      wordList = listWords();
+    }
+
+    // Using the underscore as a word boundary, collect all 3-grams.
+    var ruleList = []
+    var word_count = wordList.length;
+    for (var wordNum = 0; wordNum < word_count; wordNum++) {
+      var word = wordList[wordNum];
+      var wordLen = word.length;
+      for (var charNum = 0; charNum < wordLen; charNum++) {
+        var rule = '';
+        if (charNum === 0) {
+          rule += '_';
         } else {
-            console.log(output_text);
+          rule += word[charNum - 1];
         }
-    };
-
-    // Convert a given selection of text into an array containing its words.
-    var list_words = function (input_text) {
-        // If no input text was supplied, take it from the input field.
-        if (typeof input_text === "undefined") {
-            input_text = get_input();
+        rule += word[charNum];
+        if (charNum === wordLen - 1) {
+          rule += '_';
+        } else {
+          rule += word[charNum + 1];
         }
+        ruleList.push(rule);
+      }
+    }
+    return ruleList;
+  };
 
-        // Convert the input text and return it as an array of words.
-        var output_text = '';
-        var input_len = input_text.length;
-        for (var i = 0; i < input_len; i++) {
-            if (is_alpha(input_text[i])) {
-                output_text += input_text[i].toLowerCase();
-            } else {
-                output_text += " ";
-            }
-        }
-        output_text = output_text.replace(/  +/g, " ").trim();
-        return output_text.split(" ");
-    };
+  // Return a list of neologisms based on discovered rules.
+  var neologize = function (wordList) {
+    // If no word list was supplied, extract it from the input field.
+    if (typeof wordList === 'undefined') {
+      wordList = listWords();
+    }
 
-    // Return a list of 3-letter rules for letters sequences.
-    var list_rules = function (word_list) {
-        // If no word list was supplied, extract it from the input field.
-        if (typeof word_list === "undefined") {
-            word_list = list_words();
-        }
+    // Generate some rules for word construction.
+    var ruleList = listRules(wordList);
 
-        // Using the underscore as a word boundary, collect all 3-grams.
-        var rule_list = []
-        var word_count = word_list.length;
-        for (var iWord = 0; iWord < word_count; iWord++) {
-            var word = word_list[iWord];
-            var word_len = word.length;
-            for (var iChar = 0; iChar < word_len; iChar++) {
-                var rule = "";
-                if (iChar === 0) {
-                    rule += "_";
-                } else {
-                    rule += word[iChar - 1];
-                }
-                rule += word[iChar];
-                if (iChar === word_len - 1) {
-                    rule += "_";
-                } else {
-                    rule += word[iChar + 1];
-                }
-                rule_list.push(rule);
-            }
-        }
-        return rule_list;
-    };
+    var newWordList = [];
+    for (var i = 0; i < MAX_PASSES; i++) {
+      // Piece together bits from random rules until a word is formed.
+      var target = '_';
+      var chunk = '';
+      do { 
+        shuffle(ruleList);
 
-    // Return a list of neologisms based on discovered rules.
-    var neologize = function (word_list) {
-        // If no word list was supplied, extract it from the input field.
-        if (typeof word_list === "undefined") {
-            word_list = list_words();
+        var state = STATE_ERROR;
+
+        // Step through the 3-letter rules until a match is found.
+        var rule_count = ruleList.length;
+        for (var ruleNum = 0; ruleNum < rule_count; ruleNum++) {
+          var rule = ruleList[ruleNum];
+          if (target === rule[0]) {
+            // This condition is only met at the start of a word.
+            target = rule.substr(1, 2);
+            chunk = target[0];
+            state = STATE_MATCH;
+          } else if (target === rule.substr(0, 2)) {
+            target = rule.substr(1, 2);
+            state = STATE_MATCH;
+          }
+          if (state === STATE_MATCH) {
+            chunk += target[1];
+            state = STATE_WORKING;
+            break;
+          }
         }
 
-        // Generate some rules for word construction.
-        var rule_list = list_rules(word_list);
-
-        var new_word_list = [];
-        for (var i = 0; i < MAX_PASSES; i++) {
-            // Piece together bits from random rules until a word is formed.
-            var target = "_";
-            var chunk = "";
-            do { 
-                shuffle(rule_list);
-
-                var state = STATE_ERROR;
-
-                // Step through the 3-letter rules until a match is found.
-                var rule_count = rule_list.length;
-                for (var iRule = 0; iRule < rule_count; iRule++) {
-                    var rule = rule_list[iRule];
-                    if (target === rule[0]) {
-                        // This condition is only met at the start of a word.
-                        target = rule.substr(1, 2);
-                        chunk = target[0];
-                        state = STATE_MATCH;
-                    } else if (target === rule.substr(0, 2)) {
-                        target = rule.substr(1, 2);
-                        state = STATE_MATCH;
-                    }
-                    if (state === STATE_MATCH) {
-                        chunk += target[1];
-                        state = STATE_WORKING;
-                        break;
-                    }
-                }
-
-                // Check for a generated word of acceptable length.
-                var chunk_len = chunk.length;
-                if (chunk_len > MAX_WORD_LEN) {
-                    state = STATE_ERROR;
-                } else if (chunk_len > 1 && chunk[chunk_len - 1] === "_") {
-                    // If another word boundary is found, the word is complete!
-                    state = STATE_SUCCESS;
-                }
-            } while (state === STATE_WORKING);
-
-            // If a new word was successfully generated, at it to the list.
-            if (state === STATE_SUCCESS) {
-                var new_word = chunk.slice(0, -1);
-                if (
-                    new_word_list.indexOf(new_word) === -1
-                    && word_list.indexOf(new_word) === -1
-                ) {
-                    new_word_list.push(new_word);
-                }
-                
-                // Quit generating words when a limit is reached.
-                if (new_word_list.length >= MAX_WORD_COUNT) {
-                    break;
-                }
-            }
+        // Check for a generated word of acceptable length.
+        var chunkLen = chunk.length;
+        if (chunkLen > MAX_WORD_LEN) {
+          state = STATE_ERROR;
+        } else if (chunkLen > 1 && chunk[chunkLen - 1] === '_') {
+          // If another word boundary is found, the word is complete!
+          state = STATE_SUCCESS;
         }
-        return new_word_list;
+      } while (state === STATE_WORKING);
+
+      // If a new word was successfully generated, at it to the list.
+      if (state === STATE_SUCCESS) {
+        var newWord = chunk.slice(0, -1);
+        if (
+          newWordList.indexOf(newWord) === -1
+          && wordList.indexOf(newWord) === -1
+        ) {
+          newWordList.push(newWord);
+        }
+        
+        // Quit generating words when a limit is reached.
+        if (newWordList.length >= MAX_WORD_COUNT) {
+          break;
+        }
+      }
+    }
+    return newWordList;
+  };
+  
+  // List the neologisms generated from the input text.
+  var generate = function () {
+    var html = neologize().join('</li><li>');
+    if (html) {
+      html = '<ol><li>' + html + '</li></ol>';
+    }
+    showOutput(html);
+    
+    // If there is no output to display, show an error message instead.
+    if (html === '') {
+      alert(ERROR_NO_WORDS);
+    }
+  };
+  
+  // Replace the words in the input text with neologisms.
+  var convert = function () {
+    var newWordList = neologize();
+    
+    // If there is no output to display, show an error message instead.
+    if (!newWordList.length) {
+      showOutput('');
+      alert(ERROR_NO_WORDS);
+      return;
+    }
+    
+    // Replace a found word, maintaining capitalization, punctuation, etc.
+    var replaceWord = function (match, prefix, word, suffix, space) {
+      var newWord = getRandomItem(newWordList);
+      if (hasCapital(word)) {
+        newWord = capitalize(newWord);
+      }
+      return prefix + newWord + suffix + space;
     };
     
-    // List the neologisms generated from the input text.
-    var generate = function () {
-        var html = neologize().join("</li><li>");
-        if (html) {
-            html = "<ol><li>" + html + "</li></ol>";
-        }
-        show_output(html);
-        
-        // If there is no output to display, show an error message instead.
-        if (html === "") {
-            alert(ERROR_NO_WORDS);
-        }
-    };
-    
-    // Replace the words in the input text with neologisms.
-    var convert = function () {
-        var new_word_list = neologize();
-        
-        // If there is no output to display, show an error message instead.
-        if (!new_word_list.length) {
-            show_output("");
-            alert(ERROR_NO_WORDS);
-            return;
-        }
-        
-        // Replace a found word, maintaining capitalization, punctuation, etc.
-        var replace_word = function (match, prefix, word, suffix, space) {
-            var new_word = get_random_item(new_word_list);
-            if (has_capital(word)) {
-                new_word = capitalize(new_word);
-            }
-            return prefix + new_word + suffix + space;
-        };
-        
-        // Fetch the input text, replace its words, and output the result.
-        var text = get_input();
-        var re = "([" + PUNC_REGEX + "]*)" // Leading punctuation.
-            + "([^" + SPACE_REGEX + "]+?)" // The word to replace.
-            + "([" + PUNC_REGEX + "]*)" // Trailing punctuation.
-            + "([" + SPACE_REGEX + "]+|$)"; // Trailing space.
-        text = text.replace(new RegExp(re, "g"), replace_word);
-        show_output(escape_html(text));
-    };
-    
-    // Return a public interface for this module.
-    return {
-        generate: generate,
-        convert: convert
-    };
+    // Fetch the input text, replace its words, and output the result.
+    var text = getInput();
+    var re = '([' + PUNC_REGEX + ']*)' // Leading punctuation.
+      + '([^' + SPACE_REGEX + ']+?)' // The word to replace.
+      + '([' + PUNC_REGEX + ']*)' // Trailing punctuation.
+      + '([' + SPACE_REGEX + ']+|$)'; // Trailing space.
+    text = text.replace(new RegExp(re, 'g'), replaceWord);
+    showOutput(escapeHtml(text));
+  };
+  
+  // Return a public interface for this module.
+  return {
+    generate: generate,
+    convert: convert
+  };
 })();
